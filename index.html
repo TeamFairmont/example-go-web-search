@@ -9,7 +9,8 @@
     <!-- Bootstrap -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <style>
-    input {width:100%}
+    input {width:100%;}
+    .btn {width:100%;}
     </style>
 
     <!-- Import the crypto library.  We're using crypto-js -->
@@ -62,6 +63,11 @@
         $(document).ready(function() {
             $("#add").click(addToIndex);
             $("#search").click(doSearch);
+            $("#searchtext").on('keydown',function(e) {
+                if (e.which == 13) {
+                    doSearch();
+                }
+            });
         });
 
         function addToIndex() {
