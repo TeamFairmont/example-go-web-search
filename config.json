@@ -1,0 +1,140 @@
+{
+    "engine": {
+        "version": "SearchEx v1",
+        "bind": ":8888",
+        "tlsCertFile": "cert.pem",
+        "tlsKeyFile": "key.pem",
+        "tlsEnabled": false,
+        "authMode": "hmac",
+        "prettyOutput": true,
+        "docsEnabled": true,
+        "advanced": {
+            "stubMode": false,
+            "stubDelayMs": 15,
+            "completeResultExpiration": "120s",
+            "completeResultLoopFreq": "5s",
+            "debugFormEnabled": true
+        }
+    },
+
+    "logging": {
+        "level": "info"
+    },
+
+    "security": {
+        "verifyTimeout": 30,
+        "groups": [{
+            "name": "service",
+            "hmackey": "some_hmac_key"
+        }, {
+            "name": "enduser",
+            "hmackey": "another_hmac_key",
+            "requestsPerSecond": 10
+        }],
+        "corsDomains":["http://localhost:3000"],
+        "corsAutoAddLocal": true
+    },
+
+    "cache": {
+        "type": "",
+        "host": "localhost:6379",
+        "pass": ""
+    },
+
+    "workerConfig": {
+    },
+
+    "apiCalls": {
+        "searchFor": {
+            "resultTimeoutMs": 200,
+            "resultZombieMs": 1100,
+            "cache": {
+                "enabled": false
+            },
+            "requiredParams": {
+                "searchtext": "string",
+                "timeoutMeta":"bool"
+            },
+            "commands": [{
+                "name": "getBaseResults",
+                "resultTimeoutMs": 100,
+                "configParams": {
+                }
+            },{
+                "name": "addQuickestMetaInfo",
+                "resultTimeoutMs": 50,
+                "configParams": {
+                    "providers": ["internal-service","external-service"]
+                }
+            }]
+        },
+        "addToIndex": {
+            "resultZombieMs": 10000,
+            "resultTimeoutMs": 5000,
+            "cache": {
+                "enabled": false
+            },
+            "requiredParams": {
+                "url": "string"
+            },
+            "commands": [{
+                "name": "fetchPage",
+                "resultTimeoutMs": 3000,
+                "configParams": {}
+            }, {
+                "name": "parseKeywords",
+                "resultTimeoutMs": 500,
+                "configParams": {}
+            }, {
+                "name": "saveToIndex",
+                "resultTimeoutMs": 500,
+                "configParams": {}
+            }]
+        }
+    },
+
+    "commandMeta": {
+        "getBaseResults": {
+    	    "stubReturn": {
+                "results":[
+                    {"title":"Flavor Site", "url":"http://www.flavors.com", "score":9},
+                    {"title":"Some other stuff", "url":"http://www.other.com", "score":5},
+                    {"title":"Another amazing search result", "url":"http://www.amazing.com", "score":3},
+                    {"title":"What a great result", "url":"http://www.great.com", "score":2}
+                ]
+            },
+    	    "noStub": false
+        },
+	    "addQuickestMetaInfo": {
+            "stubReturn": {
+                "results":[
+                    {"title":"Flavor Site", "url":"http://www.flavors.com", "score":9, "meta":"Some random meta info about site"},
+                    {"title":"Some other stuff", "url":"http://www.other.com", "score":5, "meta":"More random meta info about site"},
+                    {"title":"Another amazing search result", "url":"http://www.amazing.com", "score":3, "meta":"Even more random meta info about site"},
+                    {"title":"What a great result", "url":"http://www.great.com", "score":2, "meta":"And yet again random meta info about site"}
+                ]
+            },
+            "noStub": false
+        },
+	    "fetchPage": {
+            "stubReturn": {
+                "html":"<html><head><title>Flavor Site</title></head><body>This page has lots of flavors like chocolate and vanilla</body></html>",
+                "url":"http://www.flavors.com"
+            },
+            "noStub": false
+        },
+	    "parseKeywords": {
+            "stubReturn": {
+                "keywords":["vanilla", "chocolate"],
+                "title":"Flavor Site"
+            },
+            "noStub": false
+        },
+	    "saveToIndex": {
+            "stubReturn": {
+                "success":true
+            },
+            "noStub": false
+        }
+    }
+}
