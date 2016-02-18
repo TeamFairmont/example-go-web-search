@@ -314,7 +314,8 @@ func getBaseResults(mq *mqwrapper.Connection) {
 				}
 
 				//do some work/db queries, etc (in this case, 'query' the search index)
-				results := doSearch(payload.Path("initial_input.searchtext").Data().(string))
+				stopAt := int(payload.Path("params.stopAt").Data().(float64))
+				results := doSearch(payload.Path("initial_input.searchtext").Data().(string), stopAt)
 				_, err = payload.SetP(results, "return_value.results")
 
 				// push our response to the temp mq replyTo path
@@ -330,7 +331,7 @@ func getBaseResults(mq *mqwrapper.Connection) {
 	}
 }
 
-func doSearch(search string) []*ResultInfo {
+func doSearch(search string, stopAt int) []*ResultInfo {
 	search = strings.ToLower(search)
 	terms := strings.Split(search, " ")
 	//TODO de-dupe terms!
@@ -338,6 +339,7 @@ func doSearch(search string) []*ResultInfo {
 	results := []*ResultInfo{}
 
 	//naive keyword match and score storage
+OuterLoop:
 	for i := range terms {
 		if len(terms[i]) >= 3 {
 			c, kwok := keywords[terms[i]]
@@ -349,6 +351,17 @@ func doSearch(search string) []*ResultInfo {
 						tempres[c.C[u]] = &s
 					}
 					tempres[c.C[u]].Score++
+
+					//HACK: if we get to 4 results, purposefully slow down the results for demo purposes
+					if len(tempres) == 4 {
+						r := rand.Intn(4000) + 1000
+						time.Sleep(time.Duration(r) * time.Millisecond)
+					}
+
+					//stop "assembling results" at stopAt
+					if len(tempres) >= stopAt {
+						break OuterLoop
+					}
 				}
 			}
 		}
@@ -393,7 +406,6 @@ func addQuickestMetaInfo(mq *mqwrapper.Connection) {
 				}
 
 				//TODO add some 'fake' third party vendor meta lookups for the search results
-				_ = simulateThirdPartyMeta()
 
 				// push our response to the temp mq replyTo path
 				err = mqwrapper.PublishCommand(ch, d.CorrelationId, d.ReplyTo, payload, "")
@@ -410,7 +422,7 @@ func addQuickestMetaInfo(mq *mqwrapper.Connection) {
 }
 
 func simulateThirdPartyMeta() string {
-	r := rand.Intn(500)
+	r := rand.Intn(5000)
 	time.Sleep(time.Duration(r) * time.Millisecond)
 	return strconv.Itoa(r)
 }

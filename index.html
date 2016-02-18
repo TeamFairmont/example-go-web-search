@@ -9,7 +9,7 @@
     <!-- Bootstrap -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <style>
-    input {width:100%;}
+    input,textarea {width:100%;}
     .btn {width:100%;}
     </style>
 
@@ -32,7 +32,21 @@
             <h1>Search Example</h1>
         <div class="row" style="padding-bottom: 10px;margin-bottom:10px;border-bottom:2px solid #ccc">
             <div class="col-md-8">
-                <input class="form-control" type="text" id="addurl" placeholder="URL to Index"></input>
+                <textarea class="form-control" rows="5" type="text" id="addurl" placeholder="URLs to Index">google.com
+youtube.com
+yahoo.com
+amazon.com
+wikipedia.org
+twitter.com
+live.com
+ebay.com
+bing.com
+msn.com
+instagram.com
+aliexpress.com
+apple.com
+blogspot.com
+</textarea>
             </div>
             <div class="col-md-4">
                 <button class="btn btn-info" id="add">Add URL To Index</button>
@@ -61,29 +75,38 @@
 
     <script>
         $(document).ready(function() {
-            $("#add").click(addToIndex);
+            $("#add").click(addToIndexClick);
             $("#search").click(doSearch);
             $("#searchtext").on('keydown',function(e) {
                 if (e.which == 13) {
                     doSearch();
                 }
             });
+            searchLoop();
         });
 
-        function addToIndex() {
-            if ($("#addurl").val().indexOf("http://")!=0 && $("#addurl").val().indexOf("https://")!=0) {
-                $("#addurl").val("http://"+$("#addurl").val());
+        function addToIndexClick(addurl) {
+            var urls = $("#addurl").val().split("\n");
+            for (var i=0; i<urls.length; i++) {
+                if (urls[i]!="")
+                    addToIndex(urls[i]);
             }
+        }
+
+        function addToIndex(addurl) {
+            if (addurl.indexOf("http://")!=0 && addurl.indexOf("https://")!=0) {
+                addurl = "http://"+addurl;
+            }
+
             // Create a json object with the message to encode and a timestamp
             var payload = {
               "timestamp": Math.floor(Date.now() / 1000).toString(),
               "message": JSON.stringify(
                   {
-                      "url":$("#addurl").val()
+                      "url":addurl
                   }
               )
             };
-            $("#addurl").val("");
 
             // Create the signed string
             var signature = CryptoJS.HmacSHA512(JSON.stringify(payload), "some_hmac_key");
@@ -113,13 +136,71 @@
                 xhr.setRequestHeader("Authorization", make_base_auth(username, password));
               },
               success: function(data) {
-                  alert(JSON.stringify(data.return_value));
+                  console.log("Indexed: "+JSON.stringify(data.return_value));
               },
               error: function(err) {
                   alert("error adding");
                   console.log(err);
               }
             });
+        }
+
+        var searchId = "";
+        function searchLoop() {
+            if (searchId!="") {
+                console.log("fetching more results...");
+                var payload={
+                    "timestamp": Math.floor(Date.now() / 1000).toString(),
+                    "message": JSON.stringify({})
+                };
+
+                // Create the signed string
+                var signature = CryptoJS.HmacSHA512(JSON.stringify(payload), "some_hmac_key");
+
+                // Encode the payload and signature to Base64
+                var basePayload = Base64.encode(JSON.stringify(payload));
+                var baseSignature = Base64.encode(signature.toString());
+
+                // Combine the encoded message with the key signature
+                var jsonStr = {
+                  "data": basePayload,
+                  "signature": baseSignature
+                }
+                var start=new Date();
+                $.ajax({
+                  method: 'Post',
+                  url: "http://localhost:8888/retr/peek/"+searchId,
+                  xhrFields: {
+                    withCredentials: true
+                  },
+                  data: JSON.stringify(jsonStr),
+                  beforeSend: function(xhr) {
+                    // The username is the hmacgroup name.
+                    // The password isn't used since the request uses hmac authentication.
+                    username = "service";
+                    password = "password_ignored";
+                    xhr.setRequestHeader("Authorization", make_base_auth(username, password));
+                  },
+                  success: function(data) {
+                      if (data.complete) {
+                          console.log("results complete");
+                          searchId = "";
+                          appendResults(data, null);
+                      } else {
+                          $("#results").append("<span>.<span>");
+                      }
+                      setTimeout(searchLoop, 1000);
+                  },
+                  error: function(err) {
+                      searchId="";
+                      alert("retr error");
+                      console.log(err);
+                      setTimeout(searchLoop, 1000);
+                  }
+                });
+            } else {
+                setTimeout(searchLoop, 1000);
+            }
         }
 
         function doSearch() {
@@ -164,19 +245,32 @@
                 xhr.setRequestHeader("Authorization", make_base_auth(username, password));
               },
               success: function(data) {
-                  console.log(data);
-                  var res=data.return_value.results;
-                  t=(new Date()).getTime()-start.getTime();
-                  $("#results").append("<h3>Count: "+res.length+", Time: "+t+"ms<h3>");
-                  for (var i=0; i<res.length; i++) {
-                      $("#results").append('<p><h4>'+res[i].score+': <a href="'+res[i].url+'">'+res[i].title+'</a><br><span>'+res[i].meta+'</span></h4></p><hr>');
+                  appendResults(data, start);
+                  if (!data.complete) {
+                      searchId = data.id;
+                      $("#results").append("<h4>Waiting for more results...<h4>");
                   }
               },
               error: function(err) {
-                  alert("error");
+                  alert("search error");
                   console.log(err);
               }
             });
+        }
+
+        function appendResults(data, start) {
+            var res=data.return_value.results;
+            var t = "-";
+            if (start!=null)
+                t=(new Date()).getTime()-start.getTime();
+            if (res!=null) {
+                
+                $("#results").append("<h3>Count: "+res.length+", Time: "+t+"ms<h3>");
+                for (var i=0; i<res.length; i++) {
+                    $("#results").append('<p><h4>'+res[i].score+': <a href="'+res[i].url+'">'+res[i].title+'</a><br><span>'+res[i].meta+'</span></h4></p><hr>');
+                }
+
+            }
         }
 
         function make_base_auth(user, password) {
