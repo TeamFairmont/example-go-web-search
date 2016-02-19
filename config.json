@@ -81,8 +81,8 @@
             }]
         },
         "addToIndex": {
-            "resultZombieMs": 10000,
-            "resultTimeoutMs": 5000,
+            "resultZombieMs": 180000,
+            "resultTimeoutMs": 20000,
             "cache": {
                 "enabled": false
             },
