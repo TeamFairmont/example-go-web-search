@@ -243,6 +243,7 @@ blogspot.com
                 username = "service";
                 password = "password_ignored";
                 xhr.setRequestHeader("Authorization", make_base_auth(username, password));
+                //xhr.setRequestHeader("Bolt-No-Cache","true");
               },
               success: function(data) {
                   appendResults(data, start);
