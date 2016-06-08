@@ -5,5 +5,8 @@ Usage:
 Copy config.json to /etc/bolt
 
 Then run both:
+
 go run httpserv.go
+
 go run worker-search.go
+
