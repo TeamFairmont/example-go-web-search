@@ -57,11 +57,12 @@ func main() {
 
 	boltsdk.EnableLogOutput(true)
 
-	boltsdk.RunWorker(mq, "getBaseResults", getBaseResults)
-	boltsdk.RunWorker(mq, "addQuickestMetaInfo", addQuickestMetaInfo)
-	boltsdk.RunWorker(mq, "fetchPage", fetchPage)
-	boltsdk.RunWorker(mq, "saveToIndex", saveToIndex)
-	boltsdk.RunWorker(mq, "parseKeywords", parseKeywords)
+	prefix := "SearchExample::"
+	boltsdk.RunWorker(mq, prefix, "getBaseResults", getBaseResults)
+	boltsdk.RunWorker(mq, prefix, "addQuickestMetaInfo", addQuickestMetaInfo)
+	boltsdk.RunWorker(mq, prefix, "fetchPage", fetchPage)
+	boltsdk.RunWorker(mq, prefix, "saveToIndex", saveToIndex)
+	boltsdk.RunWorker(mq, prefix, "parseKeywords", parseKeywords)
 
 	log.Println("Worker setup complete, waiting for commands... ")
 
@@ -77,6 +78,11 @@ func fetchPage(payload *gabs.Container) error {
 	//request the http url
 	url := payload.Path("initial_input.url").Data().(string)
 	payload.SetP(url, "return_value.url")
+
+	//Example of forcing a halting condition and returning an error up to the bolt engine and api client
+	//payload.SetP(boltsdk.HaltCallCommandName, "nextCommand")
+	//payload.SetP("FAKE ERROR", "error")
+	//return errors.New("FAKE ERROR")
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -97,7 +103,10 @@ func fetchPage(payload *gabs.Container) error {
 
 func parseKeywords(payload *gabs.Container) error {
 	//parse through html to extract unique 5+ letter a-zA-Z keywords
-	html := payload.Path("return_value.html").Data().(string)
+	html := ""
+	if payload.Path("return_value.html").Data() != nil {
+		html = payload.Path("return_value.html").Data().(string)
+	}
 
 	//super inefficient way to do this, a full app would parse the html tree
 	//properly, treat certain elements differently, etc

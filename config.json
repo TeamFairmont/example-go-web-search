@@ -13,7 +13,8 @@
             "stubDelayMs": 15,
             "completeResultExpiration": "120s",
             "completeResultLoopFreq": "5s",
-            "debugFormEnabled": true
+            "debugFormEnabled": true,
+            "queuePrefix":"SearchExample::"
         }
     },
 
